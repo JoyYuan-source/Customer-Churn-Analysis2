@@ -17,7 +17,7 @@ colnames(calib) <- c("customerID","2009","2010","2011","2012","2013","2014","fre
 NumTot <- nrow(calib)
 calib_combine <- calib %>% count(frequency,recency)
 
-################################## Question 1
+################################## BB and BG-BB estimation
 # BB model building and parameter estimating
 log_bb <- function(pars, x, m) {
   a <- pars[1]
@@ -55,7 +55,7 @@ LL_bgbb <- -opt_BGBB[["value"]]
 params_bgbb
 LL_bgbb
 
-################################## Question 2
+################################## Models fit 
 # observation vs. prediction
 nbr_calib <- calib %>% count(frequency)
 colnames(nbr_calib) <- c("x", "N")
@@ -95,7 +95,8 @@ select(dis_calib,x,Dis_BB,Dis_BGBB) %>%
           text=element_text(size=15),
           legend.position="bottom")
 
-################################## Question 3
+################################## let’s see how well the models capture the distribution of
+################################## cruise counts during a holdout (forecast) period
 # load holdout data
 hold <- read.table("./cruises_hold.txt",header = T)
 
@@ -133,7 +134,7 @@ select(nbr_hold,x,Obs=N,Pred_N_BB, Pred_N_BGBB) %>%
           text=element_text(size=15),
           legend.position="bottom")
 
-################################## Question 4
+################################## Prediction and Analysis 
 # merge calib and hold
 df <- merge(calib[,1:7], hold[,1:5], by = "customerID")
 df <- cbind(df, rowSums(df[,3:11]))
@@ -144,7 +145,7 @@ df <- df %>% mutate(df_recn = apply(df[2:11], 1, function(x) {
 colnames(df)[c(12,13)] <- c("frequency","recency")
 df_agg <- df %>% count(frequency,recency)
 
-# expected number of alive customers (Question.a)
+# expected number of alive customers 
 alive_exp <- round(sum(bgbb.PAlive(params_bgbb, df_agg$frequency, df_agg$recency, 9) * df_agg$n),0)
 alive_exp
 
@@ -154,12 +155,12 @@ delta <- 0.13
 DERT_exp <- sum(bgbb.DERT(params_bgbb, df_agg$frequency, df_agg$recency, 9, delta) * df_agg$n)
 DERT_exp
 
-# total expected residual lifetime value (Question.b)
+# total expected residual lifetime value 
 ERLV_exp <- DERT_exp * 241
 ERLV_exp
 
-################################## Question 5
-# incremental transactions by year (Question.a)
+##################################  how many cruises can the company expect from this new cohort in each year from 2020 to 2024?
+# incremental transactions by year 
 new_cust <- 11993
 incre_trans <- round(diff(bgbb.Expectation(params_bgbb, 0:5) * new_cust),0)
 year_cnt <- data.frame(year = c("2020","2021","2022","2023","2024"), incremental = incre_trans)
@@ -175,7 +176,7 @@ ggplot(year_cnt,aes(x = year,y = incremental,group = 1)) %>%
           text=element_text(size = 15),
           legend.position = "bottom")
 
-# Question.b is asking the maximum spend on the campaigns, in other words, the ECLV
+# the maximum spend on the campaigns, in other words, the ECLV
 max_camp <- (bgbb.DERT(params_bgbb, 0, 0, 0, delta) + 1) * new_cust*241
 max_camp
 
